@@ -1,0 +1,99 @@
+#!/usr/bin/env lua
+-----
+-- This script looks for SSH public keys in LDAP for the username specified
+-- as the first argument of the script and prints them to stdout.
+-- The configuration is read from file /etc/ssh/getkey-ldap.conf.
+--
+-- To use as the AuthorizedKeysCommand in OpenSSH 6.2+, this file must be owned
+-- by root and not writable by group or others!
+--
+-- Author: Jakub Jirutka <jakub@jirutka.cz>
+-- Date: 2016-02-26
+-- URL: https://github.com/jirutka/ssh-getkey-ldap
+--
+
+local ldap = require 'lualdap'
+
+local CONFIG_FILE = '/etc/ssh/getkey-ldap.conf'
+local DEFAULT_CONF = {
+  host = 'localhost',
+  use_tls = false,
+  binddn = nil,
+  bindpw = nil,
+  base = nil,
+  scope = 'subtree',
+  timeout = 5,
+  pubkey_attr = 'sshPublicKey'
+}
+
+
+--- Functions ---
+
+local function log (level, msg, ...)
+  msg = msg:format(...)
+  io.stderr:write(("%s: %s\n"):format(level:upper(), msg))
+  os.execute(("logger -t sshd -p auth.%s 'ldap: %s'"):format(level, msg))
+end
+
+local function die (msg, ...)
+  log('err', msg, ...)
+  os.exit(1)
+end
+
+local function merge (...)
+  local res = {}
+  for _, tab in ipairs {...} do
+    for k, v in pairs(tab) do res[k] = v end
+  end
+
+  return res
+end
+
+local function parse_config (str)
+  local conf = {}
+  for line in str:gmatch('[^\r\n]+') do
+    local key, val = line:match('^([%w_]+)%s+([^#]+)')
+    if key then
+      conf[key] = val:match('^(.-)%s*$')  -- remove trailing whitespaces
+    end
+  end
+
+  return conf
+end
+
+local function read_config (filepath)
+  local file, err = io.open(filepath, 'r')
+  if err then return nil, err end
+
+  local conf = parse_config(file:read('*a'))
+  file:close()
+
+  return merge(DEFAULT_CONF, conf)
+end
+
+
+--- Main ---
+
+local uid = arg[1] or die 'no username provided'
+
+local cfg, err1 = read_config(CONFIG_FILE)
+if err1 then die(err1) end
+
+local conn, err2 = ldap.open_simple(cfg.host, cfg.binddn, cfg.bindpw, cfg.use_tls)
+if err2 then die(err2) end
+
+local _, attrs = conn:search({
+  base = cfg.base,
+  scope = cfg.scope,
+  attrs = cfg.pubkey_attr,
+  filter = ("(&(uid=%s)(%s=*))"):format(uid, cfg.pubkey_attr),
+  timeout = tonumber(cfg.timeout),
+  sizelimit = 1
+})()
+
+local pubkeys = attrs and attrs[cfg.pubkey_attr] or {}
+
+log('info', "Loaded %d SSH public key(s) from LDAP for user: %s", #pubkeys, uid)
+print(table.concat(pubkeys, '\n'))
+
+conn:close()
