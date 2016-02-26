@@ -1,0 +1,115 @@
+= OpenSSH / LDAP public keys
+:gh-name: jirutka/ssh-getkey-ldap
+:tag: master
+:script-name: ssh-getkey-ldap
+:file-uri: https://raw.githubusercontent.com/{gh-name}/{tag}
+
+This project provides a simple script to be used as `AuthorizedKeysCommand` in OpenSSH server to fetch authorized keys from LDAP.
+The script is written in Lua and requires just one dependency, lualdap (and Lua interpreter of course).
+
+Not fan of Lua?
+Then you may try https://gist.github.com/jirutka/b15c31b2739a4f3eab63[this one] written in POSIX shell (but it requires `ldapsearch` utility and may not work well on some systems) or https://github.com/jirutka/ssh-ldap-pubkey[ssh-ldap-pubkey] written in Python.
+
+If you need an utility for users to manage keys stored in LDAP, https://github.com/jirutka/ssh-ldap-pubkey[ssh-ldap-pubkey] is what you’re looking for.
+
+
+== Requirements
+
+* Lua 5.1+ or LuaJIT 2.0+
+* https://luarocks.org/modules/bdellegrazie/lualdap[lualdap] (that requires libldap)
+
+
+== Installation
+
+=== Manual
+
+[source, sh, subs="verbatim, attributes"]
+----
+cd /usr/local/bin
+wget {file-uri}/{script-name}
+chown root:root {script-name}
+chmod 0755 {script-name}
+
+cd /etc/ssh
+wget {file-uri}/getkey-ldap.conf
+vim getkey-ldap.conf  # read next section
+----
+
+
+== Configuration
+
+The script reads configuration from `/etc/ssh/getkey-ldap.conf`.
+
+The file format is similar to other UNIX configuration files.
+Comments begin with a `#` character and extend to the end of the line; blank lines are ignored.
+Configuration options consist of an initial keyword followed by a list of values separated by one or more whitespaces.
+Options may not be continued over multiple lines.
+Keywords and values are case-sensitive.
+
+The configuration options are as follows:
+
+host::
+  A list of hostnames or IP addresses of hosts running an LDAP server to connect to.
+  Each hostname in the list may include a port number which is separated from the host itself with a colon `:` character.
+  Default value is localhost.
+
+use_tls::
+  Whether to use TLS (true, or false).
+  Default is false.
+
+binddn::
+  DN to bind when reading the user’s entry.
+  Default is to bind anonymously.
+
+bindpw::
+  Credentials to bind with when reading the user’s entry.
+  Default is none.
+
+base::
+  DN of the search base.
+  Default is empty (i.e. root of the directory).
+
+scope::
+  The search scope; base, onelevel, or subtree.
+  Default is subtree.
+
+timeout::
+  The timeout in seconds.
+  Default is 5.
+
+pubkey_attr::
+  Name of the attribute with SSH pubkeys.
+  Default is sshPublicKey.
+
+
+== Setup OpenSSH server
+
+To configure OpenSSH server to fetch users’ authorized keys from LDAP server:
+
+. Make sure that you have installed `{script-name}` in `/usr/local/bin` (or `/usr/bin`) with owner `root` and mode `0755`.
+. Add these two lines into `/etc/ssh/sshd_config`:
++
+[source, subs="verbatim, attributes"]
+----
+AuthorizedKeysCommand /usr/local/bin/{script-name}
+AuthorizedKeysCommandUser nobody
+----
+
+. Restart sshd and check log file if there’s no problem.
+
+Note: This method is supported by OpenSSH since version 6.2-p1 (or 5.3 onRedHat).
+If you have an older version and can’t upgrade, for whatever weird reason, use http://code.google.com/p/openssh-lpk/[openssh-lpk] patch instead.
+
+
+== Setup LDAP server
+
+Just add the https://raw.githubusercontent.com/jirutka/ssh-ldap-pubkey/v0.4.1/etc/openssh-lpk.schema[openssh-lpk.schema] to your LDAP server, **or** add an attribute named `sshPublicKey` to any existing schema which is already defined in people entries.
+That’s all.
+
+Note: Presumably, you’ve already setup your LDAP server for centralized unix users management, i.e. you have the http://www.zytrax.com/books/ldap/ape/nis.html[NIS schema] and users in LDAP.
+
+
+== License
+
+This project is licensed under http://opensource.org/licenses/MIT[MIT License].
+For the full text of the license, see the link:LICENSE[LICENSE] file.
