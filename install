@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+: ${DESTDIR:=/}
+: ${PREFIX:=/usr/local}
+
+bin_path="${DESTDIR}${PREFIX}/bin/ssh-getkey-ldap"
+conf_path="${DESTDIR}/etc/ssh/getkey-ldap.conf"
+
+mkdir -p "$(dirname "$bin_path")"
+cp -v ssh-getkey-ldap "$bin_path"
+chown root "$bin_path"
+chmod 0755 "$bin_path"
+
+if [ ! -f "$conf_path" ]; then
+	mkdir -p "$(dirname "$conf_path")"
+	cp -v getkey-ldap.conf "$conf_path"
+	chmod 0644 "$conf_path"
+fi
+
+cat <<-EOF
+
+	If you want OpenSSH server to look up user's public keys in LDAP,
+	add the following lines to /etc/ssh/sshd_config and reload sshd:
+
+	    AuthorizedKeysCommand $bin_path
+	    AuthorizedKeysCommandUser nobody
+
+EOF

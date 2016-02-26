@@ -1,6 +1,7 @@
 = OpenSSH / LDAP public keys
-:gh-name: jirutka/ssh-getkey-ldap
+:name: ssh-getkey-ldap
 :tag: master
+:gh-name: jirutka/{name}
 :script-name: ssh-getkey-ldap
 :file-uri: https://raw.githubusercontent.com/{gh-name}/{tag}
 
@@ -20,6 +21,15 @@ If you need an utility for users to manage keys stored in LDAP, https://github.c
 
 
 == Installation
+
+=== Using git and ./install
+
+[source, sh, subs="verbatim, attributes"]
+----
+git clone -b {tag} https://github.com/{gh-name}.git
+cd {name}
+./install
+----
 
 === Manual
 
