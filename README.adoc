@@ -1,4 +1,4 @@
-= OpenSSH / LDAP public keys
+= OpenSSH, look up public keys in LDAP!
 :name: ssh-getkey-ldap
 :tag: master
 :gh-name: jirutka/{name}
