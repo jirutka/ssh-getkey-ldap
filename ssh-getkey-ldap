@@ -49,6 +49,13 @@ local function merge (...)
   return res
 end
 
+local function parse_bool (str)
+  if str == nil then
+    return nil
+  end
+  return str:lower() == 'true' or str:lower() == 'yes'
+end
+
 local function parse_config (str)
   local conf = {}
   for line in str:gmatch('[^\r\n]+') do
@@ -67,6 +74,9 @@ local function read_config (filepath)
 
   local conf = parse_config(file:read('*a'))
   file:close()
+
+  conf.use_tls = parse_bool(conf.use_tls)
+  conf.timeout = tonumber(conf.timeout)
 
   return merge(DEFAULT_CONF, conf)
 end
@@ -87,7 +97,7 @@ local _, attrs = conn:search({
   scope = cfg.scope,
   attrs = cfg.pubkey_attr,
   filter = ("(&(uid=%s)(%s=*))"):format(uid, cfg.pubkey_attr),
-  timeout = tonumber(cfg.timeout),
+  timeout = cfg.timeout,
   sizelimit = 1
 })()
 
