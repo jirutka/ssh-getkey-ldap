@@ -1,6 +1,6 @@
 = OpenSSH, look up public keys in LDAP!
 :name: ssh-getkey-ldap
-:tag: v0.1.0
+:tag: v0.1.1
 :gh-name: jirutka/{name}
 :script-name: ssh-getkey-ldap
 :file-uri: https://raw.githubusercontent.com/{gh-name}/{tag}
