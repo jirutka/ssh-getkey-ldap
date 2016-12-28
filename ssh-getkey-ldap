@@ -103,6 +103,11 @@ local _, attrs = conn:search({
 
 local pubkeys = attrs and attrs[cfg.pubkey_attr] or {}
 
+-- Fixes https://github.com/jirutka/ssh-getkey-ldap/issues/1.
+if type(pubkeys) ~= 'table' then
+  pubkeys = { pubkeys }
+end
+
 log('info', "Loaded %d SSH public key(s) from LDAP for user: %s", #pubkeys, uid)
 print(table.concat(pubkeys, '\n'))
 
